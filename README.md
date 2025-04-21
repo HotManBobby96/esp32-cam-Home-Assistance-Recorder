@@ -5,3 +5,5 @@ https://docs.espressif.com/projects/arduino-esp32/en/latest/installing.html
 ^^^ Use the stable link
 
 copy the link into there prefrences or something. I'll update later.
+
+This will also require bleak from python to handel things. 
