@@ -6,4 +6,6 @@ https://docs.espressif.com/projects/arduino-esp32/en/latest/installing.html
 
 copy the link into there prefrences or something. I'll update later.
 
-Having to use BTL servers so we can get zigby and stuff
+Having to use BTE servers so we can get zigby and stuff
+
+This is being made for the use of camera actiavaion away from a computer and a really shitty network that wouldnt let webhooks and shi work. (fuh my school)
