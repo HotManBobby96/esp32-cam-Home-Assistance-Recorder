@@ -23,8 +23,8 @@
 #include "camera_pins.h"
 
 
-const char *ssid = ""; // this is your wifi name
-const char *password = ""; // this is your wifi password
+const char *ssid = "SETUP-2592"; // this is your wifi name
+const char *password = "bonus3421amount"; // this is your wifi password
 
 void startCameraServer();
 void setupLedFlash(int pin);
@@ -33,11 +33,6 @@ void setup() {
   Serial.begin(9600);
   Serial.setDebugOutput(true);
   Serial.println();
-
-  // MAC
-  Serial.println("ESP32-CAM Bluetooth Mac Address: "); // getting the macAdress to run
-  Serial.println(BLEDevice::getAddress().toString().c_str()); // Getting the address
-  // MAC
 
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
@@ -141,6 +136,11 @@ void setup() {
   Serial.print("Camera Ready! Use 'http://");
   Serial.print(WiFi.localIP());
   Serial.println("' to connect");
+
+   // MAC
+  Serial.println("ESP32-CAM Bluetooth Mac Address: "); // getting the macAdress to run
+  Serial.println(BLEDevice::getAddress().toString().c_str()); // Getting the address
+  // MAC
 }
 
 void loop() {
