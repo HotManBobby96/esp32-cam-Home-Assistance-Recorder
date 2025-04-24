@@ -9,7 +9,7 @@
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
   Serial.println("Starting BLE work!");
 
   BLEDevice::init("Long name works now");
