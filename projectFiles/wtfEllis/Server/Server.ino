@@ -2,34 +2,55 @@
 #include <BLEUtils.h>
 #include <BLEServer.h>
 
-// See the following for generating UUIDs:
-// https://www.uuidgenerator.net/
-
-#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b" 
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 
+bool deviceConnected = false; // logic bruh
+
+// custom callback class to detect when something has connected or disconnected 
+class MyServerCallbacks : public BLEServerCallbacks {
+  void onConnect(BLEServer* pServer) {
+    deviceConnected = true;
+    Serial.println(">> A device has connected");
+  }
+
+  void onDisconnect(BLEServer* pServer) {
+    deviceConnected = false;
+    Serial.println("<< A device has disconnected.");
+  }
+};
+
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println("Starting BLE work!");
 
-  BLEDevice::init("Long name works now");
+  BLEDevice::init("esp32bryson"); // name of the device
   BLEServer *pServer = BLEDevice::createServer();
+  pServer->setCallbacks(new MyServerCallbacks()); // Set the callback!
+
   BLEService *pService = pServer->createService(SERVICE_UUID);
   BLECharacteristic *pCharacteristic =
     pService->createCharacteristic(CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
 
   pCharacteristic->setValue("Hello World says Neil");
   pService->start();
-  // BLEAdvertising *pAdvertising = pServer->getAdvertising();  // backward camplaibiyy 
+
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(SERVICE_UUID);
   pAdvertising->setScanResponse(true);
-  pAdvertising->setMinPreferred(0x06);  // the hell do i need iphones for 
+  pAdvertising->setMinPreferred(0x06);  
   pAdvertising->setMinPreferred(0x12);
   BLEDevice::startAdvertising();
+
   Serial.println("Characteristic defined! Now you can read it in your phone!");
 }
 
 void loop() {
-  delay(2000);
+  if (deviceConnected) {
+    Serial.println("Connected");
+  } else {
+    Serial.println("Waiting for connection");
+  }
+
+  delay(500);
 }
