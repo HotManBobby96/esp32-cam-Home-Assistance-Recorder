@@ -2,12 +2,13 @@
 #include <BLEUtils.h>
 #include <BLEServer.h>
 
-#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b" 
+#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 
-bool deviceConnected = false; // logic bruh
+bool deviceConnected = false;
+String name = "esp32bryson";
 
-// custom callback class to detect when something has connected or disconnected 
+// CLASSES 
 class MyServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer* pServer) {
     deviceConnected = true;
@@ -17,16 +18,21 @@ class MyServerCallbacks : public BLEServerCallbacks {
   void onDisconnect(BLEServer* pServer) {
     deviceConnected = false;
     Serial.println("<< A device has disconnected.");
+    
+    // Just restart advertising
+    BLEDevice::startAdvertising();
+    Serial.println(">> Advertising restarted");
   }
 };
 
-void setup() {
+// FUNCTIONS
+void startServer() {
   Serial.begin(115200);
   Serial.println("Starting BLE work!");
 
-  BLEDevice::init("esp32bryson"); // name of the device
+  BLEDevice::init(name);
   BLEServer *pServer = BLEDevice::createServer();
-  pServer->setCallbacks(new MyServerCallbacks()); // Set the callback!
+  pServer->setCallbacks(new MyServerCallbacks());
 
   BLEService *pService = pServer->createService(SERVICE_UUID);
   BLECharacteristic *pCharacteristic =
@@ -38,11 +44,16 @@ void setup() {
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(SERVICE_UUID);
   pAdvertising->setScanResponse(true);
-  pAdvertising->setMinPreferred(0x06);  
+  pAdvertising->setMinPreferred(0x06);
   pAdvertising->setMinPreferred(0x12);
   BLEDevice::startAdvertising();
 
   Serial.println("Characteristic defined! Now you can read it in your phone!");
+}
+
+// SETUP & LOOP
+void setup() {
+  startServer(); 
 }
 
 void loop() {
@@ -51,6 +62,5 @@ void loop() {
   } else {
     Serial.println("Waiting for connection");
   }
-
-  delay(500);
+  delay(1000); // Less spammy output
 }
