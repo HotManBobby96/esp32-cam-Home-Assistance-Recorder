@@ -1,14 +1,6 @@
 #include "esp_camera.h"
 #include <WiFi.h>
-
-//
-// WARNING!!! PSRAM IC required for UXGA resolution and high JPEG quality
-//            Ensure ESP32 Wrover Module or other board with PSRAM is selected
-//            Partial images will be transmitted if image exceeds buffer size
-//
-//            You must select partition scheme from the board menu that has at least 3MB APP space.
-//            Face Recognition is DISABLED for ESP32 and ESP32-S2, because it takes up from 15
-//            seconds to process single frame. Face Detection is ENABLED if PSRAM is enabled as well
+#include <BLEDevice.h> // importing the library to test the thing
 
 //#define CAMERA_MODEL_WROVER_KIT // Has PSRAM
 //#define CAMERA_MODEL_ESP_EYE  // Has PSRAM
@@ -31,8 +23,8 @@
 #include "camera_pins.h"
 
 
-const char *ssid = ""; // this is your wifi name
-const char *password = ""; // this is your wifi password
+const char *ssid = "SETUP-2592"; // this is your wifi name
+const char *password = "bonus3421amount"; // this is your wifi password
 
 void startCameraServer();
 void setupLedFlash(int pin);
@@ -144,6 +136,11 @@ void setup() {
   Serial.print("Camera Ready! Use 'http://");
   Serial.print(WiFi.localIP());
   Serial.println("' to connect");
+
+   // MAC
+  Serial.println("ESP32-CAM Bluetooth Mac Address: "); // getting the macAdress to run
+  Serial.println(BLEDevice::getAddress().toString().c_str()); // Getting the address
+  // MAC
 }
 
 void loop() {
