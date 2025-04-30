@@ -8,7 +8,10 @@
 
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+
+// goofy ass logic
 #define CAMERA_MODEL_AI_THINKER // Has PSRAM
+#include "camera_pins.h"
 
 bool deviceConnected = false;
 String name = "esp32bryson";
@@ -126,7 +129,7 @@ void setup() {
 void loop() {
   if (deviceConnected) {
     Serial.println("Connected");
-    // takePicture();
+    takePicture();
   } else {
     Serial.println("Waiting for connection");
   }
