@@ -19,6 +19,8 @@ async def main():
         print(f"Connected: {connected}")
         print(f"MacAddress: {address}")
 
+        await asyncio.sleep(1) # ensuring the connection before we try and do anything (What the fuck am I doing)
+
         value = await client.read_gatt_char(CHARACTERISTIC_UUID)
         print(f"Read: {value.decode()}")
 
