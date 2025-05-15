@@ -1,0 +1,11 @@
+- alias: "Run Python Script on Sensor Trigger"
+  description: "Runs a custom Python script when the motion sensor is triggered."
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.motion_sensor_1  # repalce with sensor ID
+      to: 'on'
+  condition: []
+  action:
+    - service: shell_command.run_custom_python
+  mode: single
+# i dont know if this shit is correct 
