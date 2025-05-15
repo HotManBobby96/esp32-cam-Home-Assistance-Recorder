@@ -1,6 +1,7 @@
 import base64
+from datetime import datetime
 
-filePath = "C:\\Users\\PCHS_BPA\\Downloads\\base.txt"
+filePath = "C:\\Users\\Bryson Blakney\\Desktop\\base.txt"
 
 file = open(filePath, "r")
 base = file.readline()
@@ -9,5 +10,8 @@ file.close()
 
 imageData = base64.b64decode(base)
 
-with open("decoded_image.png", "wb") as file:
+current_time_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+filename = f"{current_time_str}.jpg"  # Change extension if needed
+
+with open(filename, "wb") as file:
     file.write(imageData)

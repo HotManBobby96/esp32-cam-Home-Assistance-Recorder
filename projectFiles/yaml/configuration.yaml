@@ -1,0 +1,2 @@
+shell_command:
+  run_custom_python: 'python3 /config/scripts/esp32ble.py' # replace with your file path to the python file you wish to atuomate 

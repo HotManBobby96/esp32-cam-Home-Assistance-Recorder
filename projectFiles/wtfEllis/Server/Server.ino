@@ -1,6 +1,8 @@
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEServer.h>
+#include "FS.h"
+#include "SD.h"
 #include "esp_camera.h"
 #include "FS.h"
 #include "SD_MMC.h"
@@ -12,23 +14,28 @@
 // goofy ass logic
 #define CAMERA_MODEL_AI_THINKER // Has PSRAM
 #include "camera_pins.h"
+#define FLASH_LED_PIN 4
 
 bool deviceConnected = false;
 String name = "esp32bryson";
+
+const char base64Table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"; // using this for the base 64
 
 // CLASSES 
 class MyServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer* pServer) {
     deviceConnected = true;
     Serial.println(">> A device has connected");
+    digitalWrite(FLASH_LED_PIN, HIGH); 
   }
 
   void onDisconnect(BLEServer* pServer) {
     deviceConnected = false;
     Serial.println("<< A device has disconnected.");
+    digitalWrite(FLASH_LED_PIN, LOW);
     
     // Just restart advertising
-    BLEDevice::startAdvertising();
+    BLEDevice::startAdvertising(); // starting the server after it is connected and disconnected
     Serial.println(">> Advertising restarted");
   }
 };
@@ -70,13 +77,13 @@ void startCamera() {
 
 void takePicture() {
   if (!SD_MMC.begin()) {
-    Serial.println("SD Card Mount Failed");
+    Serial.println("SD Card Mount Failed"); // meaning no sd card
     return;
   }
 
   camera_fb_t *fb = esp_camera_fb_get();
   if (!fb) {
-    Serial.println("Camera capture failed");
+    Serial.println("Camera capture failed"); // issues taking the picture
     return;
   }
 
@@ -117,12 +124,59 @@ void startServer() {
   Serial.println("Characteristic defined! Now you can read it in your phone!");
 }
 
+// base 64 encoding
+
+byte* readBinaryFile(const char* filename, size_t &length) {
+  File file = SD.open(filename, FILE_READ);
+  if (!file) {
+    Serial.println("Failed to open file");
+    length = 0;
+    return nullptr;
+  }
+
+  length = file.size();
+  byte* buffer = (byte*)malloc(length);
+  if (!buffer) {
+    Serial.println("Memory allocation failed");
+    file.close();
+    return nullptr;
+  }
+
+  file.read(buffer, length);
+  file.close();
+
+  return buffer;
+}
+
+String base64Encode(const byte *data, size_t length) {
+  String result;
+  int val = 0, valb = -6;
+
+  for (size_t i = 0; i < length; i++) {
+    val = (val << 8) + data[i];
+    valb += 8;
+    while (valb >= 0) {
+      result += base64Table[(val >> valb) & 0x3F];
+      valb -= 6;
+    }
+  }
+
+  if (valb > -6) result += base64Table[((val << 8) >> (valb + 8)) & 0x3F];
+  while (result.length() % 4) result += '=';
+
+  return result;
+}
+
+// make function that writes to the client with base64 code. 
+
 // SETUP & LOOP
 void setup() {
   startServer(); 
 
   // camera setup
   startCamera();
+
+  pinMode(FLASH_LED_PIN, OUTPUT);
 
 }
 
