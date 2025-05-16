@@ -2,45 +2,87 @@
 #include <BLEUtils.h>
 #include <BLEServer.h>
 #include "FS.h"
-#include "SD.h"
-#include "esp_camera.h"
-#include "FS.h"
 #include "SD_MMC.h"
-
+#include "esp_camera.h"
+#include <Base64.h>
 
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+#define CHUNK_SIZE 200
 
-// goofy ass logic
 #define CAMERA_MODEL_AI_THINKER // Has PSRAM
 #include "camera_pins.h"
 #define FLASH_LED_PIN 4
 
 bool deviceConnected = false;
-String name = "esp32bryson";
+String base64Image = "";
+int offset = 0;
 
-const char base64Table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"; // using this for the base 64
+BLECharacteristic* pCharacteristic; // Global BLE characteristic pointer
 
-// CLASSES 
 class MyServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer* pServer) {
     deviceConnected = true;
     Serial.println(">> A device has connected");
-    digitalWrite(FLASH_LED_PIN, HIGH); 
+    digitalWrite(FLASH_LED_PIN, HIGH);
   }
 
   void onDisconnect(BLEServer* pServer) {
     deviceConnected = false;
     Serial.println("<< A device has disconnected.");
     digitalWrite(FLASH_LED_PIN, LOW);
-    
-    // Just restart advertising
-    BLEDevice::startAdvertising(); // starting the server after it is connected and disconnected
+    offset = 0;
+    base64Image = "";
+    BLEDevice::startAdvertising();
     Serial.println(">> Advertising restarted");
   }
 };
 
-// FUNCTIONS
+void sendChunk() {
+  if (!deviceConnected || base64Image.length() == 0) return;
+
+  int remaining = base64Image.length() - offset;
+
+  if (remaining <= 0) {
+    pCharacteristic->setValue("EOF");
+    pCharacteristic->notify();
+    offset = 0;
+    base64Image = "";
+    Serial.println("Finished sending image");
+    return;
+  }
+
+  int len = min(CHUNK_SIZE, remaining);
+  String chunk = base64Image.substring(offset, offset + len);
+  pCharacteristic->setValue(chunk.c_str());
+  pCharacteristic->notify();
+
+  offset += len;
+  delay(5); // Small delay to avoid flooding BLE stack
+}
+
+void captureAndEncode() {
+  camera_fb_t *fb = esp_camera_fb_get();
+  if (!fb) {
+    Serial.println("Camera capture failed");
+    return;
+  }
+
+  int encodedLen = Base64.encodedLength(fb->len);
+  char* encodedBuf = new char[encodedLen + 1];
+  Base64.encode(encodedBuf, (char*)fb->buf, fb->len);
+  encodedBuf[encodedLen] = '\0';
+
+  base64Image = String(encodedBuf);
+  delete[] encodedBuf;
+
+  Serial.printf("Captured image. JPEG size: %d bytes, Base64 size: %d\n", fb->len, base64Image.length());
+
+  esp_camera_fb_return(fb);
+  offset = 0;
+}
+
+
 
 void startCamera() {
   camera_config_t config;
@@ -64,54 +106,43 @@ void startCamera() {
   config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = 20000000;
   config.pixel_format = PIXFORMAT_JPEG;
-  config.frame_size = FRAMESIZE_UXGA;
-  config.jpeg_quality = 10;
-  config.fb_count = 1;
+
+  if (psramFound()) {
+    config.frame_size = FRAMESIZE_QQVGA; // 160x120
+    config.jpeg_quality = 10;
+    config.fb_count = 1;
+  } else {
+    config.frame_size = FRAMESIZE_QQVGA;
+    config.jpeg_quality = 12;
+    config.fb_count = 1;
+  }
 
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
-    Serial.printf("Camera init failed with error 0x%x", err);
-    while (true);
-  }
-}
-
-void takePicture() {
-  if (!SD_MMC.begin()) {
-    Serial.println("SD Card Mount Failed"); // meaning no sd card
+    Serial.printf("Camera init failed with error 0x%x\n", err);
     return;
   }
-
-  camera_fb_t *fb = esp_camera_fb_get();
-  if (!fb) {
-    Serial.println("Camera capture failed"); // issues taking the picture
-    return;
-  }
-
-  File file = SD_MMC.open("/photo.jpg", FILE_WRITE);
-  if (!file) {
-    Serial.println("Failed to open file in writing mode");
-  } else {
-    file.write(fb->buf, fb->len); // Save image to SD card
-    Serial.println("Saved file to /photo.jpg");
-  }
-
-  file.close();
-  esp_camera_fb_return(fb);
 }
 
 void startServer() {
   Serial.begin(115200);
   Serial.println("Starting BLE work!");
 
-  BLEDevice::init(name);
+  BLEDevice::init("esp32bryson");
   BLEServer *pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
 
   BLEService *pService = pServer->createService(SERVICE_UUID);
-  BLECharacteristic *pCharacteristic =
-    pService->createCharacteristic(CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
+
+  pCharacteristic = pService->createCharacteristic(
+    CHARACTERISTIC_UUID,
+    BLECharacteristic::PROPERTY_READ |
+    BLECharacteristic::PROPERTY_WRITE |
+    BLECharacteristic::PROPERTY_NOTIFY
+  );
 
   pCharacteristic->setValue("Hello World says Neil");
+
   pService->start();
 
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
@@ -119,73 +150,27 @@ void startServer() {
   pAdvertising->setScanResponse(true);
   pAdvertising->setMinPreferred(0x06);
   pAdvertising->setMinPreferred(0x12);
-  BLEDevice::startAdvertising();
 
+  BLEDevice::startAdvertising();
   Serial.println("Characteristic defined! Now you can read it in your phone!");
 }
 
-// base 64 encoding
-
-byte* readBinaryFile(const char* filename, size_t &length) {
-  File file = SD.open(filename, FILE_READ);
-  if (!file) {
-    Serial.println("Failed to open file");
-    length = 0;
-    return nullptr;
-  }
-
-  length = file.size();
-  byte* buffer = (byte*)malloc(length);
-  if (!buffer) {
-    Serial.println("Memory allocation failed");
-    file.close();
-    return nullptr;
-  }
-
-  file.read(buffer, length);
-  file.close();
-
-  return buffer;
-}
-
-String base64Encode(const byte *data, size_t length) {
-  String result;
-  int val = 0, valb = -6;
-
-  for (size_t i = 0; i < length; i++) {
-    val = (val << 8) + data[i];
-    valb += 8;
-    while (valb >= 0) {
-      result += base64Table[(val >> valb) & 0x3F];
-      valb -= 6;
-    }
-  }
-
-  if (valb > -6) result += base64Table[((val << 8) >> (valb + 8)) & 0x3F];
-  while (result.length() % 4) result += '=';
-
-  return result;
-}
-
-// make function that writes to the client with base64 code. 
-
-// SETUP & LOOP
 void setup() {
-  startServer(); 
-
-  // camera setup
-  startCamera();
-
   pinMode(FLASH_LED_PIN, OUTPUT);
+  digitalWrite(FLASH_LED_PIN, LOW);
 
+  startServer();
+  startCamera();
 }
 
 void loop() {
   if (deviceConnected) {
-    Serial.println("Connected");
-    takePicture();
+    if (base64Image.length() == 0) {
+      captureAndEncode();
+    }
+    sendChunk();
   } else {
-    Serial.println("Waiting for connection");
+    Serial.println("Waiting for connection...");
+    delay(1000);
   }
-  delay(1000); // Less spammy output
 }
