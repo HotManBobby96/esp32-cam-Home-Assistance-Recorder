@@ -4,14 +4,14 @@
 #include "FS.h"
 #include "SD_MMC.h"
 #include "esp_camera.h"
-#include <Base64.h>
+#include <base64.h> // used globally like in the libraies folder
 
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 #define CHUNK_SIZE 200
 
 #define CAMERA_MODEL_AI_THINKER // Has PSRAM
-#include "camera_pins.h"
+#include "camera_pins.h" // used in our own project
 #define FLASH_LED_PIN 4
 
 bool deviceConnected = false;
@@ -39,7 +39,11 @@ class MyServerCallbacks : public BLEServerCallbacks {
 };
 
 void sendChunk() {
-  if (!deviceConnected || base64Image.length() == 0) return;
+  Serial.print("Running Chunk");
+  if (!deviceConnected || base64Image.length() == 0) {
+    Serial.print("!device || base64 image.length == 0");
+    return;
+  }
 
   int remaining = base64Image.length() - offset;
 
@@ -68,18 +72,14 @@ void captureAndEncode() {
     return;
   }
 
-  int encodedLen = Base64.encodedLength(fb->len);
-  char* encodedBuf = new char[encodedLen + 1];
-  Base64.encode(encodedBuf, (char*)fb->buf, fb->len);
-  encodedBuf[encodedLen] = '\0';
-
-  base64Image = String(encodedBuf);
-  delete[] encodedBuf;
+  base64Image = base64::encode((uint8_t*)fb->buf, fb->len);
 
   Serial.printf("Captured image. JPEG size: %d bytes, Base64 size: %d\n", fb->len, base64Image.length());
+  Serial.print(base64Image);
 
   esp_camera_fb_return(fb);
   offset = 0;
+  return;
 }
 
 
@@ -164,9 +164,11 @@ void setup() {
 }
 
 void loop() {
+  delay(1000);
   if (deviceConnected) {
     if (base64Image.length() == 0) {
-      captureAndEncode();
+    captureAndEncode();
+    delay(1000);
     }
     sendChunk();
   } else {

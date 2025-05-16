@@ -1,11 +1,15 @@
 #importing nessacary libraries
 import asyncio
-from bleak import BleakClient, BleakScanner # type: ignore
 import time
+import base64
+from bleak import BleakClient, BleakScanner # type: ignore
+from datetime import datetime
 
 SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b" #Matching the same as defined on arduino
 CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 address = "FC:E8:C0:A0:8A:AE" # Hard coding the macaddress allows the camera to connect twice as fast cutting the time delay in half
+
+picturePath = "C:\\Users\\PCHS_BPA\\Desktop\\esp32-cam-Home-Assistance-Recorder\\projectFiles\\pictures" # saving images from the thingy mobob
 
 async def main(): 
     devices = await BleakScanner.discover()
@@ -27,7 +31,7 @@ async def main():
         await client.write_gatt_char(CHARACTERISTIC_UUID, b"Hello from PC!")
         print("Wrote: Hello from PC!")
 
-        await asyncio.sleep(15) # waits for 15 seconds giving the arduino time to register 
+        await asyncio.sleep(60) # waits for 15 seconds giving the arduino time to register 
 
         await client.disconnect() # disconecs to connect later making it ble server
         print(f"disconnect from: {address}")
