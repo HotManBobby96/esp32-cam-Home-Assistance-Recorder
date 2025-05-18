@@ -18,6 +18,7 @@ bool deviceConnected = false;
 String base64Image = "";
 int offset = 0;
 
+
 BLECharacteristic* pCharacteristic; // Global BLE characteristic pointer
 
 class MyServerCallbacks : public BLEServerCallbacks {
@@ -39,9 +40,9 @@ class MyServerCallbacks : public BLEServerCallbacks {
 };
 
 void sendChunk() {
-  Serial.print("Running Chunk");
+  Serial.println("Running Chunk");
   if (!deviceConnected || base64Image.length() == 0) {
-    Serial.print("!device || base64 image.length == 0");
+    Serial.println("!device || base64 image.length == 0");
     return;
   }
 
@@ -62,10 +63,11 @@ void sendChunk() {
   pCharacteristic->notify();
 
   offset += len;
-  delay(5); // Small delay to avoid flooding BLE stack
+  delay(5);
 }
 
 void captureAndEncode() {
+  delay(7500);
   camera_fb_t *fb = esp_camera_fb_get();
   if (!fb) {
     Serial.println("Camera capture failed");
@@ -75,7 +77,7 @@ void captureAndEncode() {
   base64Image = base64::encode((uint8_t*)fb->buf, fb->len);
 
   Serial.printf("Captured image. JPEG size: %d bytes, Base64 size: %d\n", fb->len, base64Image.length());
-  Serial.print(base64Image);
+  Serial.println(base64Image);
 
   esp_camera_fb_return(fb);
   offset = 0;
@@ -140,8 +142,6 @@ void startServer() {
     BLECharacteristic::PROPERTY_WRITE |
     BLECharacteristic::PROPERTY_NOTIFY
   );
-
-  pCharacteristic->setValue("Hello World says Neil");
 
   pService->start();
 
