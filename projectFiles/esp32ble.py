@@ -37,7 +37,7 @@ async def main():
 
             #Write to the arduino and let it know your ready for it to start sending chunks
 
-            print(chunk)
+            print(f"Chunk: {chunk}")
             if chunk != prevChunk:
                 print("If statement")
                 chunk_str = chunk.decode()
