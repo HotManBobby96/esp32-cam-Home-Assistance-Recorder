@@ -1,0 +1,3 @@
+The base folder is a c++ file is how I figured out how base64 worked. \
+the MacAddy folder is how you get your Bluetooth mac address. 
+the python files is py files you can use to see what is going on if something isn't working.

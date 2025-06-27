@@ -7,11 +7,13 @@ from datetime import datetime
 
 SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b" #Matching the same as defined on arduino
 CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-address = "FC:E8:C0:A0:8A:AE" # Hard coding the macaddress allows the camera to connect twice as fast cutting the time delay in half
+address = "00:4B:12:96:F2:2A" # Hard coding the macaddress allows the camera to connect twice as fast cutting the time delay in half
 
 picturePath = "C:\\Users\\PCHS_BPA\\Desktop\\esp32-cam-Home-Assistance-Recorder\\projectFiles\\pictures" # saving images from the thingy mobob
 
 imageBase = ""
+
+data = b'\x01\x02\x03\x04' # sending bytes to the arudino for it know were connected 
 
 async def main(): 
     devices = await BleakScanner.discover()
@@ -27,11 +29,21 @@ async def main():
 
         await asyncio.sleep(1) # ensuring the connection before we try and do anything (What the fuck am I doing)
 
+        #setting this up for getting the dealio 
         image_chunks = []
         prevChunk = None
         counter = 0
 
-        print("Running true")
+        #write to the arudino and let it know toue ready
+        if client.is_connected:
+            print("Connected to the server")
+            await client.write_gatt_char(CHARACTERISTIC_UUID, data)
+            print("Data Written (ready)")
+        else:
+            print("Failed to connect and write")
+
+        #getting chunks from the arduino and decoding them
+        print("Running while true statement")
         while True:
             chunk = await client.read_gatt_char(CHARACTERISTIC_UUID)
 
