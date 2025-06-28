@@ -5,10 +5,11 @@
 #include "SD_MMC.h"
 #include "esp_camera.h"
 #include <base64.h> // used globally like in the libraies folder
+#include <string>
 
-#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b" // unique codes 
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-#define CHUNK_SIZE 200
+#define CHUNK_SIZE 200 // could be bigger but safer qucik enough too 
 
 #define CAMERA_MODEL_AI_THINKER // Has PSRAM
 #include "camera_pins.h" // used in our own project
@@ -18,8 +19,11 @@ bool deviceConnected = false;
 String base64Image = "";
 int offset = 0;
 
+bool shouldSendChunks = false;
+
 BLECharacteristic* pCharacteristic; // Global BLE characteristic pointer
 
+// Class 1 
 class MyServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer* pServer) {
     deviceConnected = true;
@@ -38,6 +42,8 @@ class MyServerCallbacks : public BLEServerCallbacks {
   }
 };
 
+
+
 void sendChunk() {
   Serial.print("Running Chunk");
   if (!deviceConnected || base64Image.length() == 0) {
@@ -48,7 +54,7 @@ void sendChunk() {
   int remaining = base64Image.length() - offset;
 
   if (remaining <= 0) {
-    pCharacteristic->setValue("EOF");
+    pCharacteristic->setValue("EOF"); // signifys when its done
     pCharacteristic->notify();
     offset = 0;
     base64Image = "";
@@ -62,7 +68,7 @@ void sendChunk() {
   pCharacteristic->notify();
 
   offset += len;
-  delay(5); // Small delay to avoid flooding BLE stack
+  delay(100); // Small delay to avoid flooding BLE stack
 }
 
 void captureAndEncode() {
@@ -81,6 +87,36 @@ void captureAndEncode() {
   offset = 0;
   return;
 }
+
+// class thing for receiving data and lgoic mobob
+// class 2
+class CharacteristicCallbacks : public BLECharacteristicCallbacks {
+  void onWrite(BLECharacteristic* pCharacteristic) {
+  std::string rxValue = pCharacteristic->getValue().c_str();
+
+  Serial.print("Received From client: ");
+  for(int i = 0; i < rxValue.length(); i++) {
+    Serial.println((uint8_t)rxValue[i], HEX);
+    Serial.println(" ");
+  } // for
+    Serial.println();
+
+    // logic down here for receiving exact key and capture, encode, and chunk (done) 
+    pCharacteristic->setValue("");
+
+  if (deviceConnected) { // fix this shit later (fixed)
+    if (base64Image.length() == 0) {
+    captureAndEncode();
+    delay(1000);
+    }
+    shouldSendChunks = true;
+  } else {
+    Serial.println("Waiting for connection...");
+    delay(1000);
+  } 
+       
+  } // void
+}; // end of class
 
 
 
@@ -109,10 +145,12 @@ void startCamera() {
 
   if (psramFound()) {
     config.frame_size = FRAMESIZE_QQVGA; // 160x120
+    //config.frame_size = FRAMESIZE_QVGA; // what the fuck dont use that right now it dosnt send properly 
     config.jpeg_quality = 10;
     config.fb_count = 1;
   } else {
-    config.frame_size = FRAMESIZE_QQVGA;
+    config.frame_size = FRAMESIZE_QQVGA; // 160x120
+    //config.frame_size = FRAMESIZE_QVGA; // 
     config.jpeg_quality = 12;
     config.fb_count = 1;
   }
@@ -141,7 +179,10 @@ void startServer() {
     BLECharacteristic::PROPERTY_NOTIFY
   );
 
-  pCharacteristic->setValue("Hello World says Neil");
+  pCharacteristic->setCallbacks(new CharacteristicCallbacks()); // I think this is for reading the shit or something
+
+  //pCharacteristic->setValue("Hello World says Neil");
+  // I dont thnik that line is important (it wasnt. fucked me over multiple times, fuck neil from wherever the fuck i got that from)
 
   pService->start();
 
@@ -152,7 +193,7 @@ void startServer() {
   pAdvertising->setMinPreferred(0x12);
 
   BLEDevice::startAdvertising();
-  Serial.println("Characteristic defined! Now you can read it in your phone!");
+  Serial.println("Characteristic defined! Now you  can read it in your phone!");
 }
 
 void setup() {
@@ -163,16 +204,13 @@ void setup() {
   startCamera();
 }
 
-void loop() {
-  delay(1000);
-  if (deviceConnected) {
-    if (base64Image.length() == 0) {
-    captureAndEncode();
-    delay(1000);
-    }
+void loop() {   
+  if (deviceConnected && shouldSendChunks) {
     sendChunk();
-  } else {
-    Serial.println("Waiting for connection...");
-    delay(1000);
+    if(base64Image.length() == 0) {
+      shouldSendChunks = false;
+    }
   }
+  delay(100); // prevent cpu from gettiung jaked (pegged)
+  Serial.println("Waiting for connection");
 }
