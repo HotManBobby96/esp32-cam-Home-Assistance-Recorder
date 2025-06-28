@@ -3,6 +3,9 @@ This is the installation link for the boards for arduino. You are going to need 
 https://docs.espressif.com/projects/arduino-esp32/en/latest/installing.html
 Python is using bleak, install that for it to work
 
+base64 library used 
+https://github.com/adamvr/arduino-base64/tree/master
+
 ^^^ Use the stable link
 
 Using BLE (Bluetooth low energy to trasnfer images across to a python scirpt) 
