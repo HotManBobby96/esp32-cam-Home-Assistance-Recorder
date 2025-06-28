@@ -4,12 +4,14 @@ import time
 import base64
 from bleak import BleakClient, BleakScanner # type: ignore
 from datetime import datetime
+from pathlib import Path
 
 SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b" #Matching the same as defined on arduino
 CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 address = "00:4B:12:96:F2:2A" # Hard coding the macaddress allows the camera to connect twice as fast cutting the time delay in half
 
-picturePath = "C:\\Users\\PCHS_BPA\\Desktop\\esp32-cam-Home-Assistance-Recorder\\projectFiles\\pictures" # saving images from the thingy mobob
+picture_dir = Path("c:\\Users\\Bryson Blakney\\Desktop\\esp32-cam-Home-Assistance-Recorder\\projectFiles\\pictures") # saving images from the thingy mobob
+picture_dir.mkdir(parents=True, exist_ok=True) # checking if the file exists 
 
 imageBase = ""
 
@@ -68,7 +70,8 @@ async def main():
         image_base64 = ''.join(image_chunks)
         image_data = base64.b64decode(image_base64)
 
-        filename = "output.jpg"
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S") # getting the current time
+        filename = picture_dir / f"image_{timestamp}.jpg"
         with open(filename, "wb") as f:
             f.write(image_data)
         print(f"Saved image as {filename}")

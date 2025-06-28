@@ -7,9 +7,9 @@
 #include <base64.h> // used globally like in the libraies folder
 #include <string>
 
-#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b" // unique codes 
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-#define CHUNK_SIZE 200
+#define CHUNK_SIZE 200 // could be bigger but safer qucik enough too 
 
 #define CAMERA_MODEL_AI_THINKER // Has PSRAM
 #include "camera_pins.h" // used in our own project
@@ -23,7 +23,7 @@ bool shouldSendChunks = false;
 
 BLECharacteristic* pCharacteristic; // Global BLE characteristic pointer
 
-// Classes 
+// Class 1 
 class MyServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer* pServer) {
     deviceConnected = true;
@@ -54,7 +54,7 @@ void sendChunk() {
   int remaining = base64Image.length() - offset;
 
   if (remaining <= 0) {
-    pCharacteristic->setValue("EOF");
+    pCharacteristic->setValue("EOF"); // signifys when its done
     pCharacteristic->notify();
     offset = 0;
     base64Image = "";
@@ -89,6 +89,7 @@ void captureAndEncode() {
 }
 
 // class thing for receiving data and lgoic mobob
+// class 2
 class CharacteristicCallbacks : public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic* pCharacteristic) {
   std::string rxValue = pCharacteristic->getValue().c_str();
@@ -100,7 +101,7 @@ class CharacteristicCallbacks : public BLECharacteristicCallbacks {
   } // for
     Serial.println();
 
-    // logic down here for receiving exact key and capture, encode, and chunk (todo) 
+    // logic down here for receiving exact key and capture, encode, and chunk (done) 
     pCharacteristic->setValue("");
 
   if (deviceConnected) { // fix this shit later
@@ -179,7 +180,7 @@ void startServer() {
   pCharacteristic->setCallbacks(new CharacteristicCallbacks()); // I think this is for reading the shit or something
 
   //pCharacteristic->setValue("Hello World says Neil");
-  // I dont thnik that line is important 
+  // I dont thnik that line is important (it wasnt. fucked me over multiple times, fuck neil from wherever the fuck i got that from)
 
   pService->start();
 
@@ -205,7 +206,7 @@ void loop() {
   if (deviceConnected && shouldSendChunks) {
     sendChunk();
     if(base64Image.length() == 0) {
-      shouldSendChunks == false;
+      shouldSendChunks = false;
     }
   }
   delay(100); // prevent cpu from gettiung jaked (pegged)
