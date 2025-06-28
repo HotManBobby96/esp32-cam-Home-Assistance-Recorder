@@ -145,10 +145,12 @@ void startCamera() {
 
   if (psramFound()) {
     config.frame_size = FRAMESIZE_QQVGA; // 160x120
+    //config.frame_size = FRAMESIZE_QVGA; // what the fuck dont use that right now it dosnt send properly 
     config.jpeg_quality = 10;
     config.fb_count = 1;
   } else {
-    config.frame_size = FRAMESIZE_QQVGA;
+    config.frame_size = FRAMESIZE_QQVGA; // 160x120
+    //config.frame_size = FRAMESIZE_QVGA; // 
     config.jpeg_quality = 12;
     config.fb_count = 1;
   }
