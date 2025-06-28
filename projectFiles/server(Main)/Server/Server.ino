@@ -104,7 +104,7 @@ class CharacteristicCallbacks : public BLECharacteristicCallbacks {
     // logic down here for receiving exact key and capture, encode, and chunk (done) 
     pCharacteristic->setValue("");
 
-  if (deviceConnected) { // fix this shit later
+  if (deviceConnected) { // fix this shit later (fixed)
     if (base64Image.length() == 0) {
     captureAndEncode();
     delay(1000);
